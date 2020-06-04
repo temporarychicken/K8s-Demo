@@ -1,0 +1,176 @@
+{
+  "description": "Build a docker base machine, build nginx plus and nginx plus ingress controller, and host the images in a registry.",
+  "variables": {
+    "home": "{{env `HOME`}}",
+    "aws_access_key": "",
+    "aws_secret_key": "",
+    "region": "eu-west-2"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "name": "docker_build_and_registry",
+      "ami_name": "docker_build_and_registry {{isotime \"2006-01-02\"}}{{uuid}}",
+      "instance_type": "t2.small",
+      "region": "{{user `region`}}",
+      "source_ami": "ami-0f70e886859c0228d",
+      "ssh_username": "centos",
+      "access_key": "{{user `aws_access_key`}}",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "tags": {
+        "Name": "docker_build_and_registry"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "{{user `home`}}/.ssh/ngx-certs",
+      "destination": "~/.ssh/ngx-certs",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "build_nginx_plus_images.sh",
+      "destination": "build_nginx_plus_images.sh",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir certs"
+      ],
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "../certs/",
+      "destination": "certs",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+
+    {
+      "type": "file",
+      "source": "../certs/nginx-repo.crt",
+      "destination": "nginx-repo.crt",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "../certs/nginx-repo.key",
+      "destination": "nginx-repo.key",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+	
+    {
+      "type": "file",
+      "source": "hosts",
+      "destination": "hosts",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "Dockerfile",
+      "destination": "Dockerfile",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+   {
+      "type": "file",
+      "source": "setup_registry.sh",
+      "destination": "setup_registry.sh",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+     {
+      "type": "file",
+      "source": "setup_selinux_and_fw.sh",
+      "destination": "setup_selinux_and_fw.sh",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "install_docker.sh",
+      "destination": "install_docker.sh",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+
+    {
+      "type": "shell",
+      "inline": [
+        "#sudo -H dnf update -y",
+		"#sudo dnf install firewalld -y",
+		"#sudo systemctl enable firewalld",
+		"#sudo systemctl start firewalld",
+		"sudo cat hosts /etc/hosts",
+		"sudo sh setup_selinux_and_fw.sh",
+		"sudo sh install_docker.sh",
+		"sudo dnf install bind-utils -y",
+		
+        "#sudo -H apt install -y python-pip",
+        "#sudo -H pip install ansible",
+
+        "./setup_registry.sh",
+
+
+
+		
+		
+		"ssh-keygen -f /tmp/sshkey -q -N ''",
+		"chmod +r /tmp/sshkey",
+		"mkdir k8s_configuration"
+      ],
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+   {
+      "type": "file",
+      "destination": "{{user `home`}}/.ssh/k8s-key.pub",
+      "source": "/tmp/sshkey.pub",
+	  "direction" : "download",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    },
+   {
+      "type": "file",
+      "destination": "{{user `home`}}/.ssh/k8s-key.pem",
+      "source": "/tmp/sshkey",
+	  "direction" : "download",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    }	
+	,
+    {
+      "type": "file",
+      "source": "k8s_configuration",
+      "destination": "k8s_configuration",
+      "only": [
+        "docker_build_and_registry"
+      ]
+    }
+
+  ]
+}

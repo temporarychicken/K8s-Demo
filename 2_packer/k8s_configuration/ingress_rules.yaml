@@ -1,0 +1,64 @@
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: ingressv1
+spec:
+  tls:
+  - hosts:
+    - k8s.nginxdemo.net
+    - k8sdashboard.nginxdemo.net
+    - ingressdashboard.nginxdemo.net
+    secretName: default-server-secret
+    
+  rules:
+  - host: k8s.nginxdemo.net
+    http:
+      paths:
+      - path: "/dashboard.html"
+        backend:
+          serviceName: nginx-ingress-service
+          servicePort: 8088
+      - path: "/api"
+        backend:
+          serviceName: nginx-ingress-service
+          servicePort: 8088
+      - path: "/"
+        backend:
+          serviceName: nginx-plus-webserver-service
+          servicePort: 80
+
+  - host: ingressdashboard.nginxdemo.net
+    http:
+      paths:
+      - path: "/dashboard.html"
+        backend:
+          serviceName: nginx-ingress-service
+          servicePort: 8088
+      - path: "/api"
+        backend:
+          serviceName: nginx-ingress-service
+          servicePort: 8088
+
+
+
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: ingressdash
+  namespace: kubernetes-dashboard
+spec:
+  tls:
+  - hosts:
+    - k8sdashboard.nginxdemo.net
+    secretName: default-server-secret
+    
+  rules:
+  - host: k8sdashboard.nginxdemo.net
+    http:
+      paths:
+      - path: "/"
+        backend:
+          serviceName: expose-dashboard-via-nodeport
+          servicePort: 443
